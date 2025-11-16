@@ -5,7 +5,7 @@
 struct Style
 {
 	int fontSize;
-	
+
 	Color textColor;
 	Color backgroundColor;
 
@@ -16,6 +16,8 @@ struct Style
 
 	int marginTop;
 	int marginBottom;
+	int marginLeft;
+	int marginRight;
 
 	int fontFlag; // 0 = normal, 1 = bold, 2 = italic, 3 = bold+italic
 };

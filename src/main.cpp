@@ -74,9 +74,25 @@ string fetch_page(string url)
 	return body_html;
 }
 
-void renderHTMLtree(HTMLElement *elem, int depth = 0)
+void renderHTMLtree(HTMLRenderer &renderer, HTMLElement *elem)
 {
+	HTMLElement *body = findBody(elem); // only render the contents of body
+	if (!body) return;
 
+	LayoutBox *rootBox = build_layout_tree(body, tagStyles);
+
+	float docX = 20; // left margin
+	float docY = 60; // top margin
+	float docWidth = (float)GetScreenWidth() - docX * 2;
+
+	rootBox->x = docX;
+	rootBox->y = docY;
+	rootBox->width = docWidth;
+	compute_layout(rootBox, renderer, rootBox->x, rootBox->y, rootBox->width);
+
+	renderer.paintLayout(rootBox);
+
+	freeLayoutTree(rootBox);
 }
 
 int main() 
@@ -109,9 +125,9 @@ int main()
 		renderer.drawElement("Bold", 20, 150, tagStyles["b"]);
 		renderer.drawElement("Bold italic", 20, 200, tagStyles["bi"]);*/
 
-		renderer.drawElement(html.c_str(), 20, 50, tagStyles["p"]);
+		//renderer.drawElement(html.c_str(), 20, 50, tagStyles["p"]);
 
-		renderHTMLtree(el);
+		renderHTMLtree(renderer, el);
 
 		EndDrawing();
 	}
