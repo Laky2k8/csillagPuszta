@@ -102,7 +102,7 @@ int main()
 
 	HTMLRenderer renderer = HTMLRenderer(("assets/fonts/" + font + "/normal.ttf"), ("assets/fonts/" + font + "/italic.ttf"), ("assets/fonts/" + font + "/bold.ttf"), ("assets/fonts/" + font + "/bold_italic.ttf"));
 
-	string html = fetch_page("https://browser.engineering");
+	string html = fetch_page("https://hackaday.com");
 
 	cout << "Fetched HTML: " << html << endl;
 
@@ -116,7 +116,6 @@ int main()
 
 	while (!WindowShouldClose())
 	{
-
 
 		// Scrolling
 		docY += GetMouseWheelMove() * 20;

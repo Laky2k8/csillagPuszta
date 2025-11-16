@@ -78,10 +78,15 @@ class HTMLRenderer
 
 		HTMLRenderer(std::string normalPath, std::string boldPath, std::string italicPath, std::string boldItalicPath)
 		{
-			this->normal = LoadFont(normalPath.c_str());
-			this->bold = LoadFont(boldPath.c_str());
-			this->italic = LoadFont(italicPath.c_str());
-			this->bold_italic = LoadFont(boldItalicPath.c_str());
+			this->normal = LoadFontEx(normalPath.c_str(), 96, 0, 0);
+			this->bold = LoadFontEx(boldPath.c_str(), 96, 0, 0);
+			this->italic = LoadFontEx(italicPath.c_str(), 96, 0, 0);
+			this->bold_italic = LoadFontEx(boldItalicPath.c_str(), 96, 0, 0);
+
+			SetTextureFilter(this->normal.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->italic.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold_italic.texture, TEXTURE_FILTER_BILINEAR);
 		}
 
 		HTMLRenderer(Font normal, Font bold, Font italic, Font bold_italic)
@@ -90,6 +95,11 @@ class HTMLRenderer
 			this->bold = bold;
 			this->italic = italic;
 			this->bold_italic = bold_italic;
+
+			SetTextureFilter(this->normal.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->italic.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold_italic.texture, TEXTURE_FILTER_BILINEAR);
 		}
 
 		~HTMLRenderer()
@@ -104,10 +114,15 @@ class HTMLRenderer
 		// Setter
 		void setFont(std::string normalPath, std::string boldPath, std::string italicPath, std::string boldItalicPath)
 		{
-			this->normal = LoadFont(normalPath.c_str());
-			this->bold = LoadFont(boldPath.c_str());
-			this->italic = LoadFont(italicPath.c_str());
-			this->bold_italic = LoadFont(boldItalicPath.c_str());
+			this->normal = LoadFontEx(normalPath.c_str(), 96, 0, 0);
+			this->bold = LoadFontEx(boldPath.c_str(), 96, 0, 0);
+			this->italic = LoadFontEx(italicPath.c_str(), 96, 0, 0);
+			this->bold_italic = LoadFontEx(boldItalicPath.c_str(), 96, 0, 0);
+
+			SetTextureFilter(this->normal.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->italic.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold_italic.texture, TEXTURE_FILTER_BILINEAR);
 		}
 
 		void setFont(Font normal, Font bold, Font italic, Font bold_italic)
@@ -116,6 +131,11 @@ class HTMLRenderer
 			this->bold = bold;
 			this->italic = italic;
 			this->bold_italic = bold_italic;
+
+			SetTextureFilter(this->normal.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->italic.texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(this->bold_italic.texture, TEXTURE_FILTER_BILINEAR);
 		}
 
 
