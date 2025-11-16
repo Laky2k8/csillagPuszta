@@ -7,8 +7,6 @@
 #include <sstream>
 #include "style.h"
 
-std::vector<std::string> wrap_and_measure(HTMLRenderer &renderer, LayoutBox *box, float maxWidth);
-
 std::vector<std::string> BLOCK_ELEMENTS = {
     "html", "body", "article", "section", "nav", "aside",
     "h1", "h2", "h3", "h4", "h5", "h6", "hgroup", "header",
@@ -32,9 +30,11 @@ std::map<std::string, Style> tagStyles = {
     {"div", {16, BLACK, Color{255, 255, 255, 0}, 4, 4, 0, 0, 0, 0, 0}},
 };
 
-static Style computeStyleForTag(const std::string &tag, const std::map<std::string, Style> &stylesheet) {
+static Style computeStyleForTag(const std::string &tag, const std::map<std::string, Style> &stylesheet)
+{
     auto it = stylesheet.find(tag);
     if (it != stylesheet.end()) return it->second;
+
     // default style
     Style s;
     s.fontSize = 20;
@@ -45,6 +45,8 @@ static Style computeStyleForTag(const std::string &tag, const std::map<std::stri
     s.fontFlag = 0;
     return s;
 }
+
+std::vector<std::string> wrap_and_measure(HTMLRenderer &renderer, const std::string &text, Font font, int fontSize, float maxWidth);
 
 class HTMLRenderer
 {
@@ -118,9 +120,19 @@ struct LayoutBox
 	HTMLElement *element;
 	Style style;
 	std::vector<LayoutBox*> children;
+	LayoutBox *parent = nullptr;
 
-	std::vector<std::string> lines;
+	std::string text;
 };
+
+static inline std::string trim_copy(const std::string &s)
+{
+    size_t a = 0;
+    while (a < s.size() && isspace((unsigned char)s[a])) ++a;
+    size_t b = s.size();
+    while (b > a && isspace((unsigned char)s[b-1])) --b;
+    return s.substr(a, b - a);
+}
 
 void build_layout_tree(HTMLElement *elem, LayoutBox *parentBox)
 {
@@ -137,12 +149,19 @@ void build_layout_tree(HTMLElement *elem, LayoutBox *parentBox)
 		if(isBlock)
 		{
 			// Create new layout box and continue with the element's children
-			LayoutBox *box = new LayoutBox{0, 0, 0, 0, child, Style{}, {}};
+			LayoutBox *box = new LayoutBox();
+			box->element = child;
+			box->parent = parentBox;
 
-			if(elem->tag == "h1") box->style.fontSize = 30;
-			else box->style.fontSize = 20;
+			box->style = computeStyleForTag(child->tag, tagStyles);
+
+			if (!child->content.empty()) 
+			{
+                box->text = trim_copy(child->content);
+            }
 
 			parentBox->children.push_back(box);
+			
 			build_layout_tree(child, box);
 		}
 		else
@@ -150,21 +169,82 @@ void build_layout_tree(HTMLElement *elem, LayoutBox *parentBox)
 			// Inline element -> flatten into parent
 			if(!child->content.empty())
 			{
-				parentBox->element->content += child->content;
-			}
+				std::string trimmed = trim_copy(child->content);
+				if(!trimmed.empty()) // only flatten if there's actually any content
+				{
+					if(!parentBox->text.empty()) parentBox->text += " ";
+					parentBox->element->content += trimmed;
+				}
 
-			build_layout_tree(child, parentBox);
+				build_layout_tree(child, parentBox);
+			}
+		}
+	}
+}
+
+void compute_layout(LayoutBox *root, HTMLRenderer &renderer, float parentX, float parentY, float parentWidth)
+{
+	root->x = parentX + root->style.paddingLeft;
+	root->width = parentWidth - (root->style.paddingLeft + root->style.paddingRight);
+
+	// Set the height for the root element, the rest will be calculated accordingly
+	if(root->parent == nullptr)
+	{
+		root->y = parentY + root->style.paddingTop;
+	}
+
+	if(root->children.empty()) // If leaf (text only)
+	{
+		Font font = renderer.getFontForStyle(root->style);
+
+		auto lines = wrap_and_measure(renderer, root->text, font, root->style.fontSize, root->width - root->style.paddingLeft - root->style.paddingRight);
+		float lineHeight = (float)root->style.fontSize + 2; // Line spacing
+
+		root->height = ( (float)lines.size() * lineHeight ) + root->style.paddingTop + root->style.paddingBottom;
+	}
+
+	else // Block with children
+	{
+		float cursorY = root->y + root->style.paddingTop;
+
+		for(auto child : root->children)
+		{
+			
 		}
 	}
 }
 
 
-std::vector<std::string> wrap_and_measure(HTMLRenderer &renderer, LayoutBox *box, float maxWidth)
+std::vector<std::string> wrap_and_measure(HTMLRenderer &renderer, const std::string &text, Font font, int fontSize, float maxWidth)
 {
-	std::vector<std::string> lines;
-	std::istringstream words(box->element->content);
-	std::string word;
-	std::string line;
-	Font fontToUse = renderer.getFontForStyle(box->style);
-	int fontSize = box->style.fontSize;
+    std::vector<std::string> lines;
+    std::istringstream iss(text);
+    std::string word;
+    std::string current;
+
+	while(iss >> word)
+	{
+		std::string test = current.empty() ? word : current + " " + word;
+		Vector2 m = MeasureTextEx(font, test.c_str(), fontSize, 1);
+
+		if(m.x > maxWidth && !current.empty())
+		{
+			lines.push_back(current);
+			current = word;
+		}
+		else
+		{
+			current = test;
+		}
+	}
+
+	if(!current.empty())
+	{
+		lines.push_back(current);
+	}
+
+	if(lines.empty())
+	{
+		lines.push_back(""); // Empty line for height measurement
+	}
 }
