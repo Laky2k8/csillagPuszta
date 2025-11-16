@@ -92,6 +92,14 @@ class HTMLRenderer
 			this->bold_italic = bold_italic;
 		}
 
+		~HTMLRenderer()
+		{
+			UnloadFont(normal);
+			UnloadFont(bold);
+			UnloadFont(italic);
+			UnloadFont(bold_italic);
+		}
+
 
 		// Setter
 		void setFont(std::string normalPath, std::string boldPath, std::string italicPath, std::string boldItalicPath)
@@ -119,6 +127,7 @@ class HTMLRenderer
 
 		Font getFontForStyle(const Style &s)
 		{
+
 			switch(s.fontFlag)
 			{
 				case 0: return this->normal;
@@ -177,129 +186,132 @@ static inline std::string trim_copy(const std::string &s)
 
 static LayoutBox* build_layout_tree(HTMLElement *elem, const std::map<std::string, Style> &stylesheet)
 {
-    if (!elem) return nullptr;
+	if (!elem) return nullptr;
 
-    // create a box for this element (caller's expectation: call with <body> and get a root box)
-    LayoutBox *box = new LayoutBox();
-    box->element = elem;
-    box->style = computeStyleForTag(elem->tag, stylesheet);
-    if (!elem->content.empty()) box->text = trim_copy(elem->content);
-
-    for (auto child : elem->children)
-	{
-        // skip non-visual tags
-        if (child->tag == "head" || child->tag == "meta" || child->tag == "script" || child->tag == "style" || child->tag == "link") continue;
-
-        bool isBlock = (std::find(BLOCK_ELEMENTS.begin(), BLOCK_ELEMENTS.end(), child->tag) != BLOCK_ELEMENTS.end());
-
-        if (isBlock)
-		{
-            LayoutBox *childBox = build_layout_tree(child, stylesheet);
-
-            if (childBox)
-			{
-                childBox->parent = box;
-                box->children.push_back(childBox);
-            }
-        }
+	// Helper function to collect all text from an element and its inline descendants
+	std::function<std::string(HTMLElement*)> collectAllText;
+	collectAllText = [&](HTMLElement* el) -> std::string {
+		std::string result = "";
 		
-		else
-		{
-            // inline: collect text into this box
-            if (!child->content.empty())
-			{
-                std::string trimmed = trim_copy(child->content);
-                if (!trimmed.empty()) // But only if there's actually any content
-				{
-                    if (!box->text.empty()) box->text += " ";
-                    box->text += trimmed;
-                }
-            }
+		// Add this element's direct content
+		if (!el->content.empty()) {
+			std::string trimmed = trim_copy(el->content);
+			if (!trimmed.empty()) {
+				result += trimmed;
+			}
+		}
+		
+		// Recursively collect from children
+		for (auto child : el->children) {
+			// Skip non-visual tags
+			if (child->tag == "head" || child->tag == "meta" || 
+				child->tag == "script" || child->tag == "style" || 
+				child->tag == "link") continue;
+			
+			bool isBlock = (std::find(BLOCK_ELEMENTS.begin(), BLOCK_ELEMENTS.end(), 
+						   child->tag) != BLOCK_ELEMENTS.end());
+			
+			if (!isBlock) {
+				// For inline elements, recursively collect their text
+				std::string childText = collectAllText(child);
+				if (!childText.empty()) {
+					if (!result.empty()) result += " ";
+					result += childText;
+				}
+			}
+			// Block elements will be handled separately, don't collect their text here
+		}
+		
+		return result;
+	};
 
-            // recurse and flatten grandchildren
-            for (auto grand : child->children) {
+	// Create a box for this element
+	LayoutBox *box = new LayoutBox();
+	box->element = elem;
+	box->style = computeStyleForTag(elem->tag, stylesheet);
 
-                bool grandIsBlock = (std::find(BLOCK_ELEMENTS.begin(), BLOCK_ELEMENTS.end(), grand->tag) != BLOCK_ELEMENTS.end());
-                if (grandIsBlock)
-				{
-                    LayoutBox *gbox = build_layout_tree(grand, stylesheet);
-                    if (gbox)
-					{
-                        gbox->parent = box;
-                        box->children.push_back(gbox);
-                    }
+	// Collect all inline text for this box
+	std::string allText = "";
+	if (!elem->content.empty()) {
+		allText = trim_copy(elem->content);
+	}
 
-                } 
-				else
-				{
-                    // inline grandchild
-                    std::function<void(HTMLElement*, LayoutBox*)> collectInline;
-                    collectInline = [&](HTMLElement* el, LayoutBox* dest)
-					{
-                        if (!el->content.empty())
-						{
-                            std::string trimmed = trim_copy(el->content);
-                            if (!trimmed.empty())
-							{
-                                if (!dest->text.empty()) dest->text += " ";
-                                dest->text += trimmed;
-                            }
-                        }
-                        for (auto e : el->children) collectInline(e, dest);
-                    };
-                    collectInline(grand, box);
-                }
-            }
-        }
-    }
+	// Process children
+	for (auto child : elem->children) {
+		// Skip non-visual tags
+		if (child->tag == "head" || child->tag == "meta" || 
+			child->tag == "script" || child->tag == "style" || 
+			child->tag == "link") continue;
 
-    return box;
+		bool isBlock = (std::find(BLOCK_ELEMENTS.begin(), BLOCK_ELEMENTS.end(), 
+					   child->tag) != BLOCK_ELEMENTS.end());
+
+		if (isBlock) {
+			// Block child: create a separate layout box for it
+			LayoutBox *childBox = build_layout_tree(child, stylesheet);
+			if (childBox) {
+				childBox->parent = box;
+				box->children.push_back(childBox);
+			}
+		} else {
+			// Inline child: collect its text into this box
+			std::string childText = collectAllText(child);
+			if (!childText.empty()) {
+				if (!allText.empty()) allText += " ";
+				allText += childText;
+			}
+		}
+	}
+
+	// Set the collected text
+	if (!allText.empty()) {
+		box->text = allText;
+	}
+
+	return box;
 }
 
 void compute_layout(LayoutBox *root, HTMLRenderer &renderer, float parentX, float parentY, float parentWidth)
 {
-	root->x = parentX + root->style.paddingLeft;
-	root->width = parentWidth - (root->style.paddingLeft + root->style.paddingRight);
+	root->x = parentX + root->style.marginLeft;
+	root->width = parentWidth - (root->style.marginLeft + root->style.marginRight);
 
-	// Set the height for the root element, the rest will be calculated accordingly
+	// Set the height for the root element
 	if(root->parent == nullptr)
 	{
-		root->y = parentY + root->style.paddingTop;
+		root->y = parentY + root->style.marginTop;
 	}
 
 	if(root->children.empty()) // If leaf (text only)
 	{
 		Font font = renderer.getFontForStyle(root->style);
 
-		auto lines = wrap_and_measure(renderer, root->text, font, root->style.fontSize, root->width - root->style.paddingLeft - root->style.paddingRight);
-		float lineHeight = (float)root->style.fontSize + 2; // Line spacing
+		float usableWidth = root->width - root->style.paddingLeft - root->style.paddingRight;
+		auto lines = wrap_and_measure(renderer, root->text, font, root->style.fontSize, usableWidth);
+		float lineHeight = (float)root->style.fontSize + 2;
 
-		root->height = ( (float)lines.size() * lineHeight ) + root->style.paddingTop + root->style.paddingBottom;
+		root->height = ((float)lines.size() * lineHeight) + root->style.paddingTop + root->style.paddingBottom;
 	}
-
 	else // Block with children
 	{
 		float cursorY = root->y + root->style.paddingTop;
 
+		// Process each child once
 		for(auto child : root->children)
 		{
 			child->parent = root;
+			child->y = cursorY + child->style.marginTop;
 
-			// Calculate children first
-			for(auto child : root->children)
-			{
-				child->parent = root;
+			float childX = root->x + root->style.paddingLeft + child->style.marginLeft;
+			float childWidth = root->width - root->style.paddingLeft - root->style.paddingRight 
+							   - child->style.marginLeft - child->style.marginRight;
 
-				// Set child Y to cursorY for now
-				child->y = cursorY + child->style.marginTop;
+			compute_layout(child, renderer, childX, child->y, childWidth);
 
-				compute_layout(child, renderer, root->x + child->style.marginLeft, child->y, root->width  - child->style.marginLeft - child->style.marginRight);
-
-				cursorY = child->y + child->height + child->style.marginBottom;
-			}
-
-			root->height = (cursorY - root->y) + root->style.paddingBottom;
+			cursorY = child->y + child->height + child->style.marginBottom;
 		}
+
+		root->height = (cursorY - root->y) + root->style.paddingBottom;
 	}
 }
 
@@ -342,4 +354,6 @@ std::vector<std::string> wrap_and_measure(HTMLRenderer &renderer, const std::str
 	{
 		lines.push_back(""); // Empty line for height measurement
 	}
+
+	return lines;
 }

@@ -216,3 +216,15 @@ HTMLElement* findBody(HTMLElement* node)
     }
     return nullptr;
 }
+
+void freeHTMLTree(HTMLElement *root)
+{
+    if (!root) return;
+    
+    for (auto child : root->children)
+    {
+        freeHTMLTree(child);
+    }
+    
+    delete root;
+}

@@ -74,15 +74,14 @@ string fetch_page(string url)
 	return body_html;
 }
 
-void renderHTMLtree(HTMLRenderer &renderer, HTMLElement *elem)
+void renderHTMLtree(HTMLRenderer &renderer, HTMLElement *elem, float docY)
 {
 	HTMLElement *body = findBody(elem); // only render the contents of body
 	if (!body) return;
 
 	LayoutBox *rootBox = build_layout_tree(body, tagStyles);
 
-	float docX = 20; // left margin
-	float docY = 60; // top margin
+	float docX = 20; // left margin // top margin
 	float docWidth = (float)GetScreenWidth() - docX * 2;
 
 	rootBox->x = docX;
@@ -103,7 +102,7 @@ int main()
 
 	HTMLRenderer renderer = HTMLRenderer(("assets/fonts/" + font + "/normal.ttf"), ("assets/fonts/" + font + "/italic.ttf"), ("assets/fonts/" + font + "/bold.ttf"), ("assets/fonts/" + font + "/bold_italic.ttf"));
 
-	string html = fetch_page("https://example.com");
+	string html = fetch_page("https://browser.engineering");
 
 	cout << "Fetched HTML: " << html << endl;
 
@@ -113,8 +112,15 @@ int main()
 	//assert(el->children.size() == 1);
 	cout << "Parsed HTML Tree: \n" << HTMLTreeToString(el) << endl;
 
+	float docY = 50; // initial Y position to start rendering
+
 	while (!WindowShouldClose())
 	{
+
+
+		// Scrolling
+		docY += GetMouseWheelMove() * 20;
+
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
 		DrawText((string(TITLE) + " " + string(VERSION_NUM) + " - " + to_string(GetFPS()) + " FPS").c_str(), 20, 20, 20, BLACK);
@@ -127,10 +133,13 @@ int main()
 
 		//renderer.drawElement(html.c_str(), 20, 50, tagStyles["p"]);
 
-		renderHTMLtree(renderer, el);
+		renderHTMLtree(renderer, el, docY);
 
 		EndDrawing();
 	}
+
+	freeHTMLTree(el);
+
 	CloseWindow();
 	return 0;
 }
