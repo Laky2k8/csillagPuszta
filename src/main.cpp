@@ -33,12 +33,7 @@ Font bold_italic = LoadFont(("assets/fonts/" + font + "/normal.ttf").c_str());
 
 HTMLRenderer renderer = HTMLRenderer(normal, italic, bold, bold_italic);*/
 
-map<string, Style> tagStyles = {
-    {"p",  {24, BLACK, RAYWHITE, 4, 4, 0, 0, 8, 8, 0}},
-    {"b",  {24, BLACK, RAYWHITE, 0, 0, 0, 0, 0, 0, 1}},
-    {"i",  {24, BLACK, RAYWHITE, 0, 0, 0, 0, 0, 0, 2}},
-	{"bi", {24, BLACK, RAYWHITE, 0, 0, 0, 0, 0, 0, 3}},
-};
+
 
 string fetch_page(string url)
 {
