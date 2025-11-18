@@ -4,13 +4,10 @@
 # Define variables
 CXX = g++
 INCLUDE = -Iinclude -Llib
-OPENSSL_DIR = "D:/msys64/mingw64"
 
-INCLUDE += -I$(OPENSSL_DIR)/include
-LIBPATH += -L$(OPENSSL_DIR)/lib
-SRC = $(wildcard src/*.cpp src/glad.c) 
+SRC = $(wildcard src/*.cpp src/glad.c src/imgui/*.cpp src/imgui/backends/imgui_impl_raylib.cpp)
 
-LIBS = -lraylib -lopengl32 -lgdi32 -lwinmm -lssl -lcrypto -lws2_32
+LIBS = -lraylib -lopengl32 -lgdi32 -lwinmm -lws2_32 
 DEBUG_FLAGS = -g -std=c++17  -static-libgcc -static-libstdc++ -static -DCPPHTTPLIB_OPENSSL_SUPPORT # These will be used for the debug build (-g for debugging, -std=c++17 for C++17 standard)
 RELEASE_FLAGS = -O2 -std=c++17 -static-libgcc -static-libstdc++ -static -DCPPHTTPLIB_OPENSSL_SUPPORT # These will be used for the release build (-O2 for optimization, -std=c++17 for C++17 standard)
 DEBUG_OUT = minipuszta_debug.exe

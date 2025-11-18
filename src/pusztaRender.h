@@ -10,6 +10,7 @@
 #include <functional>
 #include "pusztaHTML.h"
 #include "style.h"
+#include "pusztaChar.h"
 
 std::vector<std::string> BLOCK_ELEMENTS = {
 	"html", "body", "article", "section", "nav", "aside",
@@ -78,15 +79,7 @@ class HTMLRenderer
 
 		HTMLRenderer(std::string normalPath, std::string boldPath, std::string italicPath, std::string boldItalicPath)
 		{
-			this->normal = LoadFontEx(normalPath.c_str(), 96, 0, 0);
-			this->bold = LoadFontEx(boldPath.c_str(), 96, 0, 0);
-			this->italic = LoadFontEx(italicPath.c_str(), 96, 0, 0);
-			this->bold_italic = LoadFontEx(boldItalicPath.c_str(), 96, 0, 0);
-
-			SetTextureFilter(this->normal.texture, TEXTURE_FILTER_BILINEAR);
-			SetTextureFilter(this->bold.texture, TEXTURE_FILTER_BILINEAR);
-			SetTextureFilter(this->italic.texture, TEXTURE_FILTER_BILINEAR);
-			SetTextureFilter(this->bold_italic.texture, TEXTURE_FILTER_BILINEAR);
+			this->setFont(normalPath, boldPath, italicPath, boldItalicPath);
 		}
 
 		HTMLRenderer(Font normal, Font bold, Font italic, Font bold_italic)
@@ -114,10 +107,14 @@ class HTMLRenderer
 		// Setter
 		void setFont(std::string normalPath, std::string boldPath, std::string italicPath, std::string boldItalicPath)
 		{
-			this->normal = LoadFontEx(normalPath.c_str(), 96, 0, 0);
-			this->bold = LoadFontEx(boldPath.c_str(), 96, 0, 0);
-			this->italic = LoadFontEx(italicPath.c_str(), 96, 0, 0);
-			this->bold_italic = LoadFontEx(boldItalicPath.c_str(), 96, 0, 0);
+
+			std::vector<int> glyphs;
+			for (int cp = 32; cp <= 0x017F; ++cp) glyphs.push_back(cp);
+
+			this->normal = LoadFontEx(normalPath.c_str(), 96, glyphs.data(), (int)glyphs.size());
+			this->bold = LoadFontEx(boldPath.c_str(), 96,     glyphs.data(), (int)glyphs.size());
+			this->italic = LoadFontEx(italicPath.c_str(), 96, glyphs.data(), (int)glyphs.size());
+			this->bold_italic = LoadFontEx(boldItalicPath.c_str(), 96, glyphs.data(), (int)glyphs.size());
 
 			SetTextureFilter(this->normal.texture, TEXTURE_FILTER_BILINEAR);
 			SetTextureFilter(this->bold.texture, TEXTURE_FILTER_BILINEAR);
@@ -142,7 +139,8 @@ class HTMLRenderer
 		// draw text
 		void drawElement(std::string text, float x, float y, Style style)
 		{
-			DrawTextEx(getFontForStyle(style), text.c_str(), {x, y}, style.fontSize, 1, style.textColor);
+			std::string decodedText = decodeHTMLString(text);
+			DrawTextEx(getFontForStyle(style), decodedText.c_str(), {x, y}, style.fontSize, 1, style.textColor);
 		}
 
 		Font getFontForStyle(const Style &s)
@@ -285,7 +283,7 @@ static LayoutBox* build_layout_tree(HTMLElement *elem, const std::map<std::strin
 
 	// Set the collected text
 	if (!allText.empty()) {
-		box->text = allText;
+		box->text = decodeHTMLString(trim_copy(allText));
 	}
 
 	return box;

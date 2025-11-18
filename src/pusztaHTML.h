@@ -74,10 +74,31 @@ HTMLElement *HTMLParser(std::string input)
 			else if(c == '!') // Comment or doctype, skip for now
 			{
 				// Skip until ">"
-				while (i + 1 < input.size() && input[i] != '>')
+
+				if(i + 2 < input.size() && input[i + 1] == '-' && input[i + 2] == '-') // Comment
 				{
-					++i;
+					i += 3; // Skip the --
+
+					while(i + 2 < input.size())
+					{
+						if(input[i] == '-' && input[i + 1] == '-' && input[i + 2] == '>') // Comment close
+						{
+							i += 2; // Skip the comment
+							break;
+						}
+						++i;
+					}
 				}
+				else
+				{
+					// Doctype
+					while (i + 1 < input.size() && input[i] != '>')
+					{
+						++i;
+					}
+				}
+
+
 				
 				state = STATE_END_TAG;
 				continue;
@@ -86,7 +107,7 @@ HTMLElement *HTMLParser(std::string input)
 			else if(!isWhitespace(c))
 			{
 				state = STATE_READING_TAG;
-				tagName = c;
+				tagName = tolower(c);
 			}
 		}
 
@@ -117,7 +138,7 @@ HTMLElement *HTMLParser(std::string input)
 			
 			else // Read the tag
 			{
-				tagName += c;
+				tagName += tolower(c);
 			}
 		}
 
